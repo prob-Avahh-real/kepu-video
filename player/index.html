@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>涂知 · 成片预览</title>
+<style>
+  :root { --paper:#fbf7ef; --ink:#211c17; --muted:#8a7f70; --pop:#e4572e; --blue:#2f7fd6; --gold:#f2b705; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:"HanziPen SC","Kaiti SC",-apple-system,"PingFang SC",sans-serif; }
+  header { padding:28px 24px 8px; }
+  h1 { margin:0; font-size:32px; }
+  .sub { color:var(--muted); margin-top:4px; font-family:-apple-system,"PingFang SC",sans-serif; font-size:13px; }
+  .bar { display:flex; gap:10px; flex-wrap:wrap; padding:12px 24px; position:sticky; top:0; background:rgba(251,247,239,.92);
+    backdrop-filter:blur(6px); border-bottom:2px solid rgba(60,50,40,.12); z-index:2; }
+  .group { display:flex; gap:6px; align-items:center; }
+  .group > span { color:var(--muted); font-size:12px; margin-right:2px; }
+  button { font:inherit; padding:6px 12px; border:2px solid var(--ink); border-radius:999px; background:#fff;
+    cursor:pointer; font-size:14px; }
+  button.on { background:var(--ink); color:var(--paper); }
+  button:hover { border-color:var(--pop); }
+  main { padding:20px 24px 60px; display:grid; gap:20px; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); }
+  .card { border:2px solid rgba(60,50,40,.25); border-radius:16px; overflow:hidden; background:#fff; }
+  .card video { width:100%; display:block; background:#000; }
+  .meta { padding:10px 12px; display:flex; justify-content:space-between; align-items:center; gap:8px;
+    font-family:-apple-system,"PingFang SC",sans-serif; font-size:12px; color:var(--muted); }
+  .topic { font-family:inherit; font-size:16px; color:var(--ink); }
+  .tag { display:inline-block; padding:1px 8px; border-radius:999px; border:1.5px solid var(--muted); margin-left:6px; font-size:11px; }
+  a { color:var(--blue); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+  .empty { color:var(--muted); font-family:-apple-system,sans-serif; }
+</style>
+</head>
+<body>
+<header>
+  <h1>涂知 · 成片预览</h1>
+  <div class="sub">本页需经 http 打开（file:// 会被浏览器拦截 fetch），例如仓库根目录执行：<code>npm run serve</code> 后访问 <code>http://localhost:8099/player/</code></div>
+</header>
+<div class="bar">
+  <div class="group"><span>主题</span><button data-dim="topic" data-val="*" class="on">全部</button></div>
+  <div class="group" id="topics"></div>
+  <div class="group"><span>语言</span><button data-dim="lang" data-val="*" class="on">全部</button><button data-dim="lang" data-val="zh">中</button><button data-dim="lang" data-val="en">EN</button></div>
+  <div class="group"><span>画幅</span><button data-dim="ratio" data-val="*" class="on">全部</button><button data-dim="ratio" data-val="16:9">横 16:9</button><button data-dim="ratio" data-val="9:16">竖 9:16</button></div>
+</div>
+<main id="grid"></main>
+
+<script>
+const state = { topic: '*', lang: '*', ratio: '*' };
+let items = [];
+const grid = document.getElementById('grid');
+const topicsEl = document.getElementById('topics');
+const q = new URLSearchParams(location.search);
+for (const d of ['topic','lang','ratio']) { const v = q.get(d); if (v) state[d] = v; }
+
+function setActive(dim, val){
+  document.querySelectorAll('.bar button[data-dim="'+dim+'"]').forEach(x=>x.classList.toggle('on', x.dataset.val===val));
+}
+
+function fmtBytes(b){ return (b/1048576).toFixed(1)+' MB'; }
+
+function card(it){
+  const el = document.createElement('div');
+  el.className = 'card';
+  const v = document.createElement('video');
+  v.controls = true; v.preload = 'none'; v.src = '../dist/' + it.file;
+  if (it.thumb) v.poster = '../dist/' + it.thumb;
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const left = document.createElement('div');
+  left.innerHTML = '<span class="topic">' + it.topic + '</span><span class="tag">' + it.lang.toUpperCase() + '</span><span class="tag">' + it.ratio + '</span>';
+  const right = document.createElement('div');
+  right.innerHTML = (it.srt ? '<a href="../dist/'+it.srt+'" download>字幕</a> · ' : '') +
+                    '<a href="../dist/'+it.file+'" download>下载</a> · ' + fmtBytes(it.bytes);
+  meta.append(left, right);
+  el.append(v, meta);
+  return el;
+}
+
+function render(){
+  const list = items.filter(i => (state.topic==='*'||i.topic===state.topic) && (state.lang==='*'||i.lang===state.lang) && (state.ratio==='*'||i.ratio===state.ratio));
+  grid.innerHTML = '';
+  if(!list.length){ const d=document.createElement('div'); d.className='empty'; d.textContent='没有匹配的成片。'; grid.append(d); return; }
+  list.forEach(i => grid.append(card(i)));
+}
+
+document.querySelectorAll('.bar button[data-dim]').forEach(b => {
+  b.addEventListener('click', () => {
+    const dim = b.dataset.dim, val = b.dataset.val;
+    state[dim] = val;
+    setActive(dim, val);
+    render();
+  });
+});
+
+fetch('../dist/manifest.json').then(r => r.json()).then(data => {
+  items = data;
+  const topics = [...new Set(items.map(i=>i.topic))];
+  topics.forEach(t => {
+    const b = document.createElement('button');
+    b.dataset.dim='topic'; b.dataset.val=t; b.textContent=t;
+    b.addEventListener('click', ()=>{ state.topic=t; setActive('topic',t); render(); });
+    topicsEl.append(b);
+  });
+  ['topic','lang','ratio'].forEach(d=>setActive(d, state[d]));
+  render();
+}).catch(e => { grid.innerHTML = '<div class="empty">读取 manifest.json 失败：'+e.message+'（请用 http 打开并先运行 npm run manifest）</div>'; });
+</script>
+</body>
+</html>

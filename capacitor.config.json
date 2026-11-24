@@ -1,0 +1,8 @@
+{
+  "appId": "com.kepu.video",
+  "appName": "涂知",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "name": "kepu-video",
+  "version": "0.1.0",
+  "description": "涂知 — 手绘涂鸦科普视频生成器（中英双语，桌面 + 移动端出片）",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "render": "tsx scripts/render-cli.ts",
+    "manifest": "tsx scripts/build-manifest.ts",
+    "serve": "python3 -m http.server 8099",
+    "dev:web": "vite",
+    "build:web": "vite build",
+    "preview:web": "vite preview --port 5181",
+    "cap:sync": "npm run build:web && cap sync",
+    "cap:android": "npm run build:web && cap sync android && cap open android",
+    "cap:ios": "npm run build:web && cap sync ios && cap open ios",
+    "test": "tsx tests/smoke.ts",
+    "acceptance": "tsx scripts/acceptance.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6",
+    "@capacitor/core": "^6",
+    "@capacitor/ios": "^6",
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@napi-rs/canvas": "^0.1.65",
+    "roughjs": "^4.6.6"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.4.4"
+  }
+}
